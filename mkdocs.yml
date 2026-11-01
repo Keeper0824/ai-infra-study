@@ -1,0 +1,52 @@
+site_name: 深入理解 AI Infra：量化分析与系统设计
+site_description: 从数据搬移理解芯片、网络、推理与训练系统
+site_url: https://bojieli.github.io/ai-infra-book/
+repo_url: https://github.com/bojieli/ai-infra-book
+repo_name: bojieli/ai-infra-book
+docs_dir: build/docs
+site_dir: build/site
+use_directory_urls: false
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.footer
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: 切换深色模式
+    - scheme: slate
+      primary: blue grey
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: 切换浅色模式
+plugins:
+  - search:
+      lang: [zh, en]
+markdown_extensions:
+  - admonition
+  - attr_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+      slugify: !!python/name:pymdownx.slugs.uslugify
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+extra_javascript:
+  - assets/math.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
+extra_css:
+  - assets/reading.css
+validation:
+  links:
+    anchors: info
