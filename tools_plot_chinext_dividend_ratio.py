@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import time
 import urllib.parse
 import urllib.request
 from datetime import date, timedelta
@@ -10,34 +11,50 @@ from xml.sax.saxutils import escape
 
 
 ROOT = Path(__file__).resolve().parent
-OUT_SVG = ROOT / "创业板指中证红利比值_沪深300指数_近10年.svg"
-OUT_CSV = ROOT / "创业板指中证红利比值_沪深300指数_近10年.csv"
+OUT_SVG = ROOT / "创业板指中证红利比值_沪深300指数_全历史.svg"
+OUT_CSV = ROOT / "创业板指中证红利比值_沪深300指数_全历史.csv"
 
 
-def fetch_daily_close(secid: str, start: str, end: str) -> dict[str, float]:
-    params = {
-        "secid": secid,
-        "fields1": "f1,f2,f3,f4,f5,f6",
-        "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
-        "klt": "101",
-        "fqt": "0",
-        "beg": start,
-        "end": end,
-    }
-    url = "http://push2his.eastmoney.com/api/qt/stock/kline/get?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        payload = json.load(response)
+def fetch_daily_close(symbol: str, start: str, end: str) -> dict[str, float]:
+    params = {"param": f"{symbol},day,{start},{end},640,qfq"}
+    url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Connection": "close"})
+    last_error: Exception | None = None
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                payload = json.load(response)
+            break
+        except Exception as exc:
+            last_error = exc
+            if attempt == 3:
+                raise
+            time.sleep(0.8 * (attempt + 1))
+    else:
+        raise RuntimeError(f"行情请求失败: {symbol}") from last_error
 
-    data = payload.get("data") or {}
-    klines = data.get("klines") or []
+    data = (payload.get("data") or {}).get(symbol) or {}
+    klines = data.get("day") or data.get("qfqday") or []
     if not klines:
-        raise RuntimeError(f"未获取到行情数据: {secid}")
+        raise RuntimeError(f"未获取到行情数据: {symbol} ({start} - {end})")
 
     result: dict[str, float] = {}
-    for row in klines:
-        fields = row.split(",")
-        result[fields[0]] = float(fields[2])  # f53: 收盘点位
+    for fields in klines:
+        result[fields[0]] = float(fields[2])
+    return result
+
+
+def fetch_full_history(symbol: str, start_day: date, end_day: date) -> dict[str, float]:
+    result: dict[str, float] = {}
+    cursor = start_day
+    while cursor <= end_day:
+        segment_end = min(cursor + timedelta(days=2 * 365), end_day)
+        result.update(fetch_daily_close(
+            symbol,
+            cursor.strftime("%Y-%m-%d"),
+            segment_end.strftime("%Y-%m-%d"),
+        ))
+        cursor = segment_end + timedelta(days=1)
     return result
 
 
@@ -79,7 +96,7 @@ def render_svg(rows: list[tuple[str, float, float, float, float]]) -> None:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
         '<rect width="100%" height="100%" fill="#ffffff"/>',
         '<style>text{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#374151}.title{font-size:25px;font-weight:700}.axis{font-size:14px}.note{font-size:12px;fill:#6b7280}</style>',
-        f'<text class="title" x="{width / 2}" y="42" text-anchor="middle">创业板指 / 中证红利比值与沪深300指数（近10年）</text>',
+        f'<text class="title" x="{width / 2}" y="42" text-anchor="middle">创业板指 / 中证红利比值与沪深300指数（自创业板指发布以来）</text>',
         f'<line x1="{width - 390}" y1="62" x2="{width - 350}" y2="62" stroke="#d94841" stroke-width="3"/><text class="axis" x="{width - 342}" y="67">创业板指 / 中证红利</text>',
         f'<line x1="{width - 195}" y1="62" x2="{width - 155}" y2="62" stroke="#2563a6" stroke-width="3"/><text class="axis" x="{width - 147}" y="67">沪深300（右轴）</text>',
     ]
@@ -110,7 +127,7 @@ def render_svg(rows: list[tuple[str, float, float, float, float]]) -> None:
         f'<text class="axis" x="{width / 2}" y="{height - 48}" text-anchor="middle">日期</text>',
         f'<text class="axis" x="28" y="{top + plot_h / 2}" text-anchor="middle" transform="rotate(-90 28 {top + plot_h / 2})">比值（收盘点位之比）</text>',
         f'<text class="axis" x="{width - 25}" y="{top + plot_h / 2}" text-anchor="middle" transform="rotate(90 {width - 25} {top + plot_h / 2})" fill="#1d4f91">沪深300收盘点位</text>',
-        f'<text class="note" x="{left}" y="{height - 16}">数据：东方财富历史行情；红线为创业板指/中证红利比值（左轴），蓝线为沪深300原始收盘点位（右轴），未计算比值。</text>',
+        f'<text class="note" x="{left}" y="{height - 16}">数据：腾讯证券历史行情；红线为创业板指/中证红利比值（左轴），蓝线为沪深300原始收盘点位（右轴），未计算比值。</text>',
         '</svg>',
     ])
     OUT_SVG.write_text("\n".join(parts), encoding="utf-8")
@@ -118,22 +135,14 @@ def render_svg(rows: list[tuple[str, float, float, float, float]]) -> None:
 
 def main() -> None:
     end_day = date.today()
-    start_day = end_day - timedelta(days=10 * 365 + 3)
-    middle_day = end_day - timedelta(days=5 * 365 + 2)
-    start = start_day.strftime("%Y%m%d")
-    middle = middle_day.strftime("%Y%m%d")
-    before_middle = (middle_day - timedelta(days=1)).strftime("%Y%m%d")
-    end = end_day.strftime("%Y%m%d")
+    start_day = date(2010, 5, 31)
 
-    chinext = fetch_daily_close("0.399006", start, before_middle)
-    chinext.update(fetch_daily_close("0.399006", middle, end))
-    hs300 = fetch_daily_close("1.000300", start, before_middle)
-    hs300.update(fetch_daily_close("1.000300", middle, end))
-    dividend = fetch_daily_close("1.000922", start, before_middle)
-    dividend.update(fetch_daily_close("1.000922", middle, end))
+    chinext = fetch_full_history("sz399006", start_day, end_day)
+    hs300 = fetch_full_history("sh000300", start_day, end_day)
+    dividend = fetch_full_history("sh000922", start_day, end_day)
     common_dates = sorted(set(chinext) & set(hs300) & set(dividend))
     if not common_dates:
-        raise RuntimeError("两个指数没有可对齐的共同交易日")
+        raise RuntimeError("三只指数没有可对齐的共同交易日")
 
     rows = [
         (d, chinext[d], hs300[d], dividend[d], chinext[d] / dividend[d])

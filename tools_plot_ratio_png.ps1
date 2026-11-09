@@ -2,8 +2,8 @@ Add-Type -AssemblyName System.Windows.Forms.DataVisualization
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$csvPath = Join-Path $root '创业板指中证红利比值_沪深300指数_近10年.csv'
-$pngPath = Join-Path $root '创业板指中证红利比值_沪深300指数_近10年.png'
+$csvPath = Join-Path $root '创业板指中证红利比值_沪深300指数_全历史.csv'
+$pngPath = Join-Path $root '创业板指中证红利比值_沪深300指数_全历史.png'
 $rows = Import-Csv -LiteralPath $csvPath
 
 $chart = New-Object System.Windows.Forms.DataVisualization.Charting.Chart
@@ -77,7 +77,7 @@ foreach ($row in $rows) {
 }
 
 $title = New-Object System.Windows.Forms.DataVisualization.Charting.Title
-$title.Text = '创业板指 / 中证红利比值与沪深300指数（近10年）'
+$title.Text = '创业板指 / 中证红利比值与沪深300指数（自创业板指发布以来）'
 $title.Font = New-Object System.Drawing.Font('Microsoft YaHei', 17, [System.Drawing.FontStyle]::Bold)
 $title.Docking = 'Top'
 $chart.Titles.Add($title)
