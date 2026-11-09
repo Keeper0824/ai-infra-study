@@ -1,0 +1,64 @@
+{
+  "crossings": {
+    "baseline": {
+      "ridge": 163.88888888888889,
+      "M": 178.14471899510528,
+      "first_compute_integer": 179
+    },
+    "compute_2x": {
+      "ridge": 327.77777777777777,
+      "M": 390.233819919907,
+      "first_compute_integer": 391
+    },
+    "bandwidth_2x": {
+      "ridge": 81.94444444444444,
+      "M": 85.35985758286472,
+      "first_compute_integer": 86
+    }
+  },
+  "comparison": [
+    {
+      "device": "RTX 4090",
+      "M": 1,
+      "compute_us": 0.20311399515738499,
+      "memory_us": 33.30438095238095,
+      "lower_bound_us": 33.30438095238095,
+      "dominant": "memory"
+    },
+    {
+      "device": "RTX 4090",
+      "M": 256,
+      "compute_us": 51.997182760290556,
+      "memory_us": 37.44914285714286,
+      "lower_bound_us": 51.997182760290556,
+      "dominant": "matrix"
+    },
+    {
+      "device": "H100 SXM",
+      "M": 1,
+      "compute_us": 0.03391391954720032,
+      "memory_us": 10.021139104477612,
+      "lower_bound_us": 10.021139104477612,
+      "dominant": "memory"
+    },
+    {
+      "device": "H100 SXM",
+      "M": 256,
+      "compute_us": 8.681963404083282,
+      "memory_us": 11.268279402985076,
+      "lower_bound_us": 11.268279402985076,
+      "dominant": "memory"
+    }
+  ],
+  "qwen3_8b": {
+    "W_layer": 192937984,
+    "linear_per_token": 13891534848,
+    "head": 1244659712,
+    "decode_attention": 4831838208,
+    "decode_total": 19968032768,
+    "prefill_pairs": 8390656,
+    "prefill_linear": 56899726737408,
+    "prefill_attention": 4949010284544,
+    "prefill_total": 61849981681664
+  }
+}
